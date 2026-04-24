@@ -1,0 +1,60 @@
+name: Sync upstream skill
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Sync from upstream
+        run: python3 scripts/sync-upstream.py
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if git diff --quiet -- skills/karpathy-guidelines/SKILL.md .upstream-sync.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update sync PR
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch="sync/upstream-karpathy-guidelines"
+          commit_sha="$(python3 -c "import json; print(json.load(open('.upstream-sync.json'))['commit'][:12])")"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add skills/karpathy-guidelines/SKILL.md .upstream-sync.json
+          git commit \
+            -m "Sync Karpathy guidelines from upstream" \
+            -m "Update the Codex skill package to match Forrest Chang's upstream skill." \
+            -m "Constraint: Upstream repository is the source of truth for guideline content" \
+            -m "Confidence: high" \
+            -m "Scope-risk: narrow" \
+            -m "Tested: scripts/sync-upstream.py completed in GitHub Actions" \
+            -m "Not-tested: Manual behavioral evaluation of changed guideline wording"
+          git push --force-with-lease origin "$branch"
+
+          title="Sync Karpathy guidelines from upstream (${commit_sha})"
+          body="Automated sync from forrestchang/andrej-karpathy-skills at ${commit_sha}. Review the SKILL.md wording changes, then merge to publish the updated Codex package."
+          pr_number="$(gh pr list --head "$branch" --json number --jq '.[0].number')"
+          if [ -n "$pr_number" ] && [ "$pr_number" != "null" ]; then
+            gh pr edit "$pr_number" --title "$title" --body "$body"
+          else
+            gh pr create --base main --head "$branch" --title "$title" --body "$body"
+          fi

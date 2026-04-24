@@ -1,0 +1,7 @@
+interface:
+  display_name: "Karpathy Guidelines"
+  short_description: "Safer, simpler coding guardrails"
+  brand_color: "#111827"
+  default_prompt: "Use $karpathy-guidelines to keep this coding task simple, surgical, and verified."
+policy:
+  allow_implicit_invocation: true
