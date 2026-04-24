@@ -15,7 +15,7 @@ Install directly from GitHub with Codex's skill installer:
 
 ```bash
 python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo no-later-cn/andrej-karpathy-skills-codex \
+  --repo 0xyanyan/andrej-karpathy-skills-codex \
   --path skills/karpathy-guidelines
 ```
 
